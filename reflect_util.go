@@ -3,7 +3,6 @@ package go_config
 import (
 	"fmt"
 	"reflect"
-	s "strings"
 )
 
 func checkFieldValidity(f interface{}) (reflect.Value, error) {
@@ -28,7 +27,9 @@ func getFieldFromName(c Config, name string) interface{} {
 	val := reflect.ValueOf(c.structToFill).Elem()
 
 	for i := 0; i < val.NumField(); i++ {
-		if s.ToLower(val.Type().Field(i).Name) == s.ToLower(name) {
+		tagName, ok := val.Type().Field(i).Tag.Lookup("name")
+
+		if ok && tagName == name {
 			return val.Field(i)
 		}
 	}
