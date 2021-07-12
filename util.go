@@ -21,3 +21,12 @@ func getStringFlagFromName(sfl []*StringFlag, name string) *StringFlag {
 	}
 	return nil
 }
+
+func getStringFlagFromNameOrAlias(sfl []*StringFlag, name string) *StringFlag {
+	for _, sf := range sfl {
+		if sf.f.name == name || sliceContains(sf.f.alias, name) {
+			return sf
+		}
+	}
+	return nil
+}

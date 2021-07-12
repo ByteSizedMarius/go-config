@@ -5,14 +5,14 @@ import (
 	go_config "github.com/ByteSizedMarius/go-config"
 )
 
-type Config struct {
+type TestConfig struct {
 	Option1 string `name:"optionEins"`
 	Option2 string `name:"optionZwei"`
 	Option3 string `name:"optionDrei"`
 }
 
 func main() {
-	test := &Config{}
+	test := &TestConfig{}
 
 	cs, err := go_config.Initialize(test)
 	if err != nil {
@@ -26,4 +26,6 @@ func main() {
 	err = cs.Parse()
 	fmt.Println(err)
 	fmt.Println(test.Option1)
+	fmt.Println(test.Option2)
+	fmt.Println(test.Option3)
 }

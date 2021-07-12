@@ -50,7 +50,7 @@ func (c *Config) checkForDuplicates() error {
 
 			// if two names of one flag are included, throw error
 			if inc && con {
-				return fmt.Errorf("There were two values proviced for the commandline-parameter " + sfn + " via its aliases. Every commandline-parameter should only be set once.")
+				return fmt.Errorf("There were two values provided for the commandline-parameter " + sfn + " via its aliases. Every commandline-parameter should only be set once.")
 			} else if con {
 				// if this is the first one included, set inc to true
 				inc = true
@@ -65,13 +65,18 @@ func (c *Config) checkForDuplicates() error {
 func (c *Config) initializeCommandline() {
 	// iterate string flags
 	for _, sf := range c.stringFlags {
+		if sf.f.doNotUseInCli {
+			break
+		}
 
 		// results to each parameter will be in the map, using their name as a key
 		sf.values = append(sf.values, cli.String(sf.f.name, "", sf.f.description))
 
 		// since one parameter theoretically can have multiple values, they are stored in an array
-		for _, sfa := range sf.f.alias {
-			sf.values = append(sf.values, cli.String(sfa, "", sf.f.description))
+		if !sf.f.doNotUseAliasInCli {
+			for _, sfa := range sf.f.alias {
+				sf.values = append(sf.values, cli.String(sfa, "", sf.f.description))
+			}
 		}
 	}
 
