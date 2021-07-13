@@ -34,10 +34,7 @@ type StringFlag struct {
 
 /*
 Tests:
--a und -A sollten als unterschiedliche Parameter funktionieren können
-sicherstellen dass die einzigartigkeit von flags richtig überprüft wird
-sicherstellen dass die use-optionen im flag struct funken
-todo: wenn alias in cli disabled aber angegeben, panic abfangen und stattdessen error zurückgeben?
+sicherstellen dass die ini-setter funktionieren
 */
 
 // Initialize checks parameters and creates a Config-struct
@@ -148,10 +145,12 @@ func (sf *StringFlag) SetDescription(desc string) *StringFlag {
 	return sf
 }
 
-func (sf *StringFlag) SetUseAliasInCli(use bool) {
+func (sf *StringFlag) SetUseAliasInCli(use bool) *StringFlag {
 	sf.f.doNotUseAliasInCli = !use
+	return sf
 }
 
-func (sf *StringFlag) SetUseInCli(use bool) {
+func (sf *StringFlag) SetUseInCli(use bool) *StringFlag {
 	sf.f.doNotUseInCli = !use
+	return sf
 }

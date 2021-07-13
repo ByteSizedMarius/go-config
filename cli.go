@@ -3,18 +3,26 @@ package go_config
 import (
 	cli "flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	s "strings"
 )
 
-func (c *Config) parseCLI() error {
+func (c *Config) parseCLI() (err error) {
 	c.initializeCommandline()
 
 	// make sure that no parameter has been set twice in the cli
-	err := c.checkForDuplicates()
+	err = c.checkForDuplicates()
 	if err != nil {
 		return err
 	}
+
+	// recover panic from flag-package
+	defer func() {
+		if errX := recover(); errX != nil {
+			err = fmt.Errorf(fmt.Sprint(errX))
+		}
+	}()
 
 	// evaluate commandline-parameters
 	cli.Parse()
@@ -63,6 +71,12 @@ func (c *Config) checkForDuplicates() error {
 }
 
 func (c *Config) initializeCommandline() {
+	cli.CommandLine = cli.NewFlagSet(os.Args[0], cli.PanicOnError)
+
+	// this will stop the flag package from printing
+	// since i recover the panic and print the error myself, we don't need the spam
+	cli.CommandLine.SetOutput(ioutil.Discard)
+
 	// iterate string flags
 	for _, sf := range c.stringFlags {
 		if sf.f.doNotUseInCli {
