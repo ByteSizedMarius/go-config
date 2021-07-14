@@ -33,7 +33,7 @@ func (c *Config) parseCLI() (err error) {
 		// Take the first non-empty value from the cli and set it into the struct
 		for _, sfv := range sf.values {
 			if *sfv != "" {
-				sf.pointerToStructField.SetString(*sfv)
+				sf.f.pointerToStructField.SetString(*sfv)
 			}
 		}
 	}
@@ -47,6 +47,8 @@ func (c *Config) checkForDuplicates() error {
 	for i := range args {
 		args[i] = s.Trim(args[i], "-")
 	}
+
+	// todo mit bool map implementieren damit man flagübergreifend die namen checken kann
 
 	// iterate string flags
 	for _, sf := range c.stringFlags {
@@ -90,6 +92,20 @@ func (c *Config) initializeCommandline() {
 		if !sf.f.doNotUseAliasInCli {
 			for _, sfa := range sf.f.alias {
 				sf.values = append(sf.values, cli.String(sfa, "", sf.f.description))
+			}
+		}
+	}
+
+	// iterate int flags
+	for _, inf := range c.intFlags {
+		if inf.f.doNotUseInCli {
+			break
+		}
+
+		inf.values = append(inf.values, cli.Int(inf.f.name, -1, inf.f.description))
+		if !inf.f.doNotUseAliasInCli {
+			for _, infa := range inf.f.alias {
+				inf.values = append(inf.values, cli.Int(infa, -1, inf.f.description))
 			}
 		}
 	}

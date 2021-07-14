@@ -4,35 +4,52 @@ import (
 	cli "flag"
 	"fmt"
 	"github.com/pkg/errors"
-	"github.com/zieckey/goini"
 	"reflect"
 )
 
 type Config struct {
 	structToFill interface{}
 	stringFlags  []*StringFlag
+	intFlags     []*IntFlag
+	boolFlags    []*BoolFlag
 	Usage        func()
 	iniFile      string
 }
 
 type flag struct {
-	name               string
-	alias              []string
-	description        string
-	doNotUseInCli      bool
-	doNotUseInIni      bool
-	doNotUseAliasInCli bool
-	doNotUseAliasInIni bool
-}
-
-type StringFlag struct {
-	f                    flag
-	values               []*string      // stores the flags values during parsing
-	defValue             string         // the default-value
+	name                 string
+	alias                []string
+	description          string
+	doNotUseInCli        bool
+	doNotUseInIni        bool
+	doNotUseAliasInCli   bool
+	doNotUseAliasInIni   bool
 	pointerToStructField *reflect.Value // the pointer to the field in the struct
 }
 
+type StringFlag struct {
+	f        *flag
+	values   []*string // stores the flags values during parsing
+	defValue string    // the default-value
+}
+
+type IntFlag struct {
+	f        *flag
+	values   []*int
+	defValue int
+}
+
+type BoolFlag struct {
+	f        *flag
+	values   []*bool
+	defValue bool
+}
+
 /*
+todo: check if field is correct type for current flag
+
+
+
 Tests:
 sicherstellen dass die ini-setter funktionieren
 */
@@ -52,53 +69,8 @@ func Initialize(stf interface{}) (Config, error) {
 	return Config{structToFill: stf, Usage: cli.Usage}, nil
 }
 
-func (c *Config) ParseINI() error {
-	if c.iniFile == "" {
-		return nil
-	}
-
-	ini := goini.New()
-	err := ini.ParseFile(c.iniFile)
-
-	configMap := ini.GetAll()
-
-	// The configMap is a nested map
-	// The outer map are the sections in the ini, we ignore these here.
-	for _, section := range configMap {
-
-		// The inner map is [string]string, consisting of the ini-keys and values
-		for iniKey, iniVal := range section {
-
-			// check if we have a flag with the same name
-			sf := getStringFlagFromNameOrAlias(c.stringFlags, iniKey)
-			if sf == nil {
-				return fmt.Errorf("flag provided but not definied")
-			}
-			tmp := sf
-
-			// If usage of aliases in ini was disabled, check again
-			if sf.f.doNotUseAliasInIni {
-				sf = getStringFlagFromName(c.stringFlags, iniKey)
-			}
-
-			// ini contains the alias of a flag where alias usage was disabled
-			if sf == nil {
-				return fmt.Errorf("flag " + tmp.f.name + " was not configured to be used with aliases")
-			}
-
-			// ini contains flag where ini functionality was disabled
-			if sf.f.doNotUseInIni {
-				return fmt.Errorf("flag " + sf.f.name + " cannot be set via ini")
-			}
-			sf.pointerToStructField.SetString(iniVal)
-		}
-	}
-
-	return err
-}
-
 func (c *Config) Parse() error {
-	err := c.ParseINI()
+	err := c.parseINI()
 	if err != nil {
 		return errors.Wrap(err, "INI")
 	}
@@ -123,7 +95,7 @@ func (c *Config) NewString(name string, defaultValue string) *StringFlag {
 	}
 	field.SetString(defaultValue)
 
-	sf := StringFlag{f: flag{name: name, alias: []string{}}, defValue: defaultValue, pointerToStructField: &field}
+	sf := StringFlag{f: &flag{name: name, alias: []string{}, pointerToStructField: &field}, defValue: defaultValue}
 	c.stringFlags = append(c.stringFlags, &sf)
 	return &sf
 }

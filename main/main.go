@@ -23,6 +23,8 @@ func main() {
 	cs.NewString("optionZwei", "default")
 	cs.NewString("optionDrei", "default")
 
+	cs.SetINI("config.ini")
+
 	err = cs.Parse()
 	fmt.Println(err)
 	fmt.Println(test.Option1)
