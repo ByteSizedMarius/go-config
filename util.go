@@ -13,19 +13,19 @@ func sliceContains(sl []string, va string) bool {
 	return false
 }
 
-func getStringFlagFromName(sfl []*StringFlag, name string) *StringFlag {
-	for _, sf := range sfl {
-		if sf.f.name == name {
-			return sf
+func getFlagFromName(fl []*Flag, name string) *Flag {
+	for _, f := range fl {
+		if f.name == name {
+			return f
 		}
 	}
 	return nil
 }
 
-func getStringFlagFromNameOrAlias(sfl []*StringFlag, name string) *StringFlag {
-	for _, sf := range sfl {
-		if sf.f.name == name || sliceContains(sf.f.alias, name) {
-			return sf
+func getFlagFromNameOrAlias(fl []*Flag, name string) *Flag {
+	for _, f := range fl {
+		if f.name == name || sliceContains(f.alias, name) {
+			return f
 		}
 	}
 	return nil

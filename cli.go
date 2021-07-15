@@ -1,9 +1,9 @@
 package go_config
 
 import (
+	"errors"
 	cli "flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	s "strings"
 )
@@ -19,8 +19,10 @@ func (c *Config) parseCLI() (err error) {
 
 	// recover panic from flag-package
 	defer func() {
-		if errX := recover(); errX != nil {
-			err = fmt.Errorf(fmt.Sprint(errX))
+		if errX := recover().(error); errX != nil {
+			if !errors.Is(cli.ErrHelp, errX) {
+				err = fmt.Errorf(fmt.Sprint(errX))
+			}
 		}
 	}()
 
@@ -28,13 +30,33 @@ func (c *Config) parseCLI() (err error) {
 	cli.Parse()
 
 	// iterate all string flags
-	for _, sf := range c.stringFlags {
+	for _, f := range c.flags {
 
-		// Take the first non-empty value from the cli and set it into the struct
-		for _, sfv := range sf.values {
-			if *sfv != "" {
-				sf.f.pointerToStructField.SetString(*sfv)
+		switch f.flagT.(type) {
+
+		case *stringFlag:
+			// Take the first non-empty value from the cli and set it into the struct
+			for _, sfv := range f.flagT.(*stringFlag).values {
+				if *sfv != "" {
+					f.pointerToStructField.SetString(*sfv)
+				}
 			}
+
+		case *intFlag:
+			// Take the first non-empty value from the cli and set it into the struct
+			for _, ifv := range f.flagT.(*intFlag).values {
+				if *ifv != -1 {
+					f.pointerToStructField.SetInt(int64(*ifv))
+				}
+			}
+
+		case *boolFlag:
+			// Take the first non-empty value from the cli and set it into the struct
+			value := false
+			for _, bfv := range f.flagT.(*boolFlag).values {
+				value = value || *bfv
+			}
+			f.pointerToStructField.SetBool(value)
 		}
 	}
 
@@ -42,73 +64,83 @@ func (c *Config) parseCLI() (err error) {
 }
 
 func (c *Config) checkForDuplicates() error {
+	used := make(map[string]bool)
+
 	// Remove cli prefixes
 	args := append(os.Args[:0:0], os.Args...) // copy slice
 	for i := range args {
 		args[i] = s.Trim(args[i], "-")
 	}
 
-	// todo mit bool map implementieren damit man flagübergreifend die namen checken kann
-
-	// iterate string flags
-	for _, sf := range c.stringFlags {
-		inc := false
-
-		// iterate all possible names
-		for _, sfn := range append(sf.f.alias, sf.f.name) {
-			con := sliceContains(args, sfn)
-
-			// if two names of one flag are included, throw error
-			if inc && con {
-				return fmt.Errorf("There were two values provided for the commandline-parameter " + sfn + " via its aliases. Every commandline-parameter should only be set once.")
-			} else if con {
-				// if this is the first one included, set inc to true
-				inc = true
+	for _, f := range c.flags {
+		for _, fn := range append(f.alias, f.name) {
+			if used[fn] {
+				return fmt.Errorf("There were two values provided for the commandline-parameter " + fn + " via its aliases. Every commandline-parameter should only be set once.")
 			}
+
+			used[fn] = true
 		}
 	}
 
-	// todo do this for other flags
 	return nil
 }
 
 func (c *Config) initializeCommandline() {
 	cli.CommandLine = cli.NewFlagSet(os.Args[0], cli.PanicOnError)
 
-	// this will stop the flag package from printing
-	// since i recover the panic and print the error myself, we don't need the spam
-	cli.CommandLine.SetOutput(ioutil.Discard)
-
-	// iterate string flags
-	for _, sf := range c.stringFlags {
-		if sf.f.doNotUseInCli {
-			break
+	for _, f := range c.flags {
+		if f.doNotUseInCli {
+			continue
 		}
 
-		// results to each parameter will be in the map, using their name as a key
-		sf.values = append(sf.values, cli.String(sf.f.name, "", sf.f.description))
+		switch f.flagT.(type) {
 
-		// since one parameter theoretically can have multiple values, they are stored in an array
-		if !sf.f.doNotUseAliasInCli {
-			for _, sfa := range sf.f.alias {
-				sf.values = append(sf.values, cli.String(sfa, "", sf.f.description))
+		case *stringFlag:
+			sf := f.flagT.(*stringFlag)
+
+			// results to each parameter will be in the map, using their name as a key
+			sf.values = append(sf.values, cli.String(f.name, "", f.description))
+
+			// since one parameter theoretically can have multiple values, they are stored in an array
+			if !f.doNotUseAliasInCli {
+				for _, sfa := range f.alias {
+					sf.values = append(sf.values, cli.String(sfa, "", f.description))
+				}
+			}
+
+		case *intFlag:
+			inf := f.flagT.(*intFlag)
+
+			inf.values = append(inf.values, cli.Int(f.name, -1, f.description))
+			if !f.doNotUseAliasInCli {
+				for _, infa := range f.alias {
+					inf.values = append(inf.values, cli.Int(infa, -1, f.description))
+				}
+			}
+
+		case *boolFlag:
+			bf := f.flagT.(*boolFlag)
+
+			bf.values = append(bf.values, cli.Bool(f.name, false, f.description))
+			if !f.doNotUseAliasInCli {
+				for _, bfa := range f.alias {
+					bf.values = append(bf.values, cli.Bool(bfa, false, f.description))
+				}
 			}
 		}
 	}
+}
 
-	// iterate int flags
-	for _, inf := range c.intFlags {
-		if inf.f.doNotUseInCli {
-			break
-		}
+// SetUseInCli sets whether the parameter will be available via commandline-parameters
+// Default: True
+func (f *Flag) SetUseInCli(use bool) *Flag {
+	f.doNotUseInCli = !use
+	return f
+}
 
-		inf.values = append(inf.values, cli.Int(inf.f.name, -1, inf.f.description))
-		if !inf.f.doNotUseAliasInCli {
-			for _, infa := range inf.f.alias {
-				inf.values = append(inf.values, cli.Int(infa, -1, inf.f.description))
-			}
-		}
-	}
-
-	// todo iterate all other possible flag types
+// SetUseAliasInCli allows setting whether the provided aliases will be useable via the cli.
+// Default: True
+func (f *Flag) SetUseAliasInCli(use bool) *Flag {
+	f.doNotUseAliasInCli = !use
+	return f
 }

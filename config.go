@@ -9,14 +9,13 @@ import (
 
 type Config struct {
 	structToFill interface{}
-	stringFlags  []*StringFlag
-	intFlags     []*IntFlag
-	boolFlags    []*BoolFlag
+	flags        []*Flag
 	Usage        func()
 	iniFile      string
 }
 
-type flag struct {
+type Flag struct {
+	flagT                interface{}
 	name                 string
 	alias                []string
 	description          string
@@ -27,28 +26,24 @@ type flag struct {
 	pointerToStructField *reflect.Value // the pointer to the field in the struct
 }
 
-type StringFlag struct {
-	f        *flag
+type stringFlag struct {
 	values   []*string // stores the flags values during parsing
 	defValue string    // the default-value
 }
 
-type IntFlag struct {
-	f        *flag
+type intFlag struct {
 	values   []*int
 	defValue int
 }
 
-type BoolFlag struct {
-	f        *flag
+type boolFlag struct {
 	values   []*bool
 	defValue bool
 }
 
 /*
 todo: check if field is correct type for current flag
-
-
+todo: setuseinini setusealiasinini
 
 Tests:
 sicherstellen dass die ini-setter funktionieren
@@ -80,8 +75,8 @@ func (c *Config) Parse() error {
 }
 
 // NewString adds a new string-parameter to the config-handler
-func (c *Config) NewString(name string, defaultValue string) *StringFlag {
-	if getStringFlagFromNameOrAlias(c.stringFlags, name) != nil {
+func (c *Config) NewString(name string, defaultValue string) *Flag {
+	if getFlagFromNameOrAlias(c.flags, name) != nil {
 		panic("duplicate flag: " + name)
 	}
 
@@ -95,34 +90,71 @@ func (c *Config) NewString(name string, defaultValue string) *StringFlag {
 	}
 	field.SetString(defaultValue)
 
-	sf := StringFlag{f: &flag{name: name, alias: []string{}, pointerToStructField: &field}, defValue: defaultValue}
-	c.stringFlags = append(c.stringFlags, &sf)
-	return &sf
+	fl := Flag{
+		flagT:                &stringFlag{defValue: defaultValue},
+		name:                 name,
+		pointerToStructField: &field,
+	}
+	c.flags = append(c.flags, &fl)
+	return &fl
 }
 
+// SetINI sets the ini-File to parse
 func (c *Config) SetINI(iniFile string) *Config {
 	c.iniFile = iniFile
 	return c
 }
 
 // SetAlias sets the aliases for the string-parameter
-func (sf *StringFlag) SetAlias(alias []string) *StringFlag {
-	sf.f.alias = alias
-	return sf
+func (f *Flag) SetAlias(alias []string) *Flag {
+	f.alias = alias
+	return f
 }
 
 // SetDescription sets the description used by the flag-pkg for help
-func (sf *StringFlag) SetDescription(desc string) *StringFlag {
-	sf.f.description = desc
-	return sf
+func (f *Flag) SetDescription(desc string) *Flag {
+	f.description = desc
+	return f
 }
 
-func (sf *StringFlag) SetUseAliasInCli(use bool) *StringFlag {
-	sf.f.doNotUseAliasInCli = !use
-	return sf
+func (f Flag) Name() string {
+	return f.name
 }
 
-func (sf *StringFlag) SetUseInCli(use bool) *StringFlag {
-	sf.f.doNotUseInCli = !use
-	return sf
+func (f Flag) Alias() []string {
+	return f.alias
+}
+
+func (f Flag) Description() string {
+	return f.description
+}
+
+func (f Flag) Default() interface{} {
+	switch f.flagT.(type) {
+	case *stringFlag:
+		return f.flagT.(*stringFlag).defValue
+
+	case *intFlag:
+		return f.flagT.(*intFlag).defValue
+
+	case *boolFlag:
+		return f.flagT.(*boolFlag).defValue
+	}
+	return nil
+}
+
+func (f Flag) Type() string {
+	switch f.flagT.(type) {
+	case *stringFlag:
+		return "string"
+
+	case *intFlag:
+		return "int"
+
+	case *boolFlag:
+		return "bool"
+
+	default:
+		return ""
+	}
 }

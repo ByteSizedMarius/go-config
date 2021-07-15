@@ -3,6 +3,7 @@ package go_config
 import (
 	"fmt"
 	"github.com/zieckey/goini"
+	"strconv"
 )
 
 func (c *Config) parseINI() error {
@@ -23,27 +24,47 @@ func (c *Config) parseINI() error {
 		for iniKey, iniVal := range section {
 
 			// check if we have a flag with the same name
-			sf := getStringFlagFromNameOrAlias(c.stringFlags, iniKey)
-			if sf == nil {
+			f := getFlagFromNameOrAlias(c.flags, iniKey)
+			if f == nil {
 				return fmt.Errorf("flag provided but not definied")
 			}
-			tmp := sf
+			tmp := f
 
 			// If usage of aliases in ini was disabled, check again
-			if sf.f.doNotUseAliasInIni {
-				sf = getStringFlagFromName(c.stringFlags, iniKey)
+			if f.doNotUseAliasInIni {
+				f = getFlagFromName(c.flags, iniKey)
 			}
 
 			// ini contains the alias of a flag where alias usage was disabled
-			if sf == nil {
-				return fmt.Errorf("flag " + tmp.f.name + " was not configured to be used with aliases")
+			if f == nil {
+				return fmt.Errorf("flag " + tmp.name + " was not configured to be used with aliases")
 			}
 
 			// ini contains flag where ini functionality was disabled
-			if sf.f.doNotUseInIni {
-				return fmt.Errorf("flag " + sf.f.name + " cannot be set via ini")
+			if f.doNotUseInIni {
+				return fmt.Errorf("flag " + f.name + " cannot be set via ini")
 			}
-			sf.f.pointerToStructField.SetString(iniVal)
+
+			switch f.flagT.(type) {
+
+			case *stringFlag:
+				f.pointerToStructField.SetString(iniVal)
+
+			case *intFlag:
+				val, err := strconv.Atoi(iniVal)
+				if err != nil {
+					return err
+				}
+
+				f.pointerToStructField.SetInt(int64(val))
+
+			case *boolFlag:
+				val, err := strconv.ParseBool(iniVal)
+				if err != nil {
+					return err
+				}
+				f.pointerToStructField.SetBool(val)
+			}
 		}
 	}
 
