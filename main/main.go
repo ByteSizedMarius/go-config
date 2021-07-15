@@ -8,7 +8,7 @@ import (
 type TestConfig struct {
 	Option1 string `name:"optionEins"`
 	Option2 string `name:"optionZwei"`
-	Option3 int    `name:"optionDrei"`
+	Option3 string `name:"optionDrei"`
 }
 
 func main() {

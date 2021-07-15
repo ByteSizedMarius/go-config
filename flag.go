@@ -41,18 +41,22 @@ func (f *Flag) SetDescription(desc string) *Flag {
 	return f
 }
 
+// Name returns the name of the referenced flag
 func (f Flag) Name() string {
 	return f.name
 }
 
+// Alias returns all aliases of the referenced flag
 func (f Flag) Alias() []string {
 	return f.alias
 }
 
+// Description returns the description of the referenced flag
 func (f Flag) Description() string {
 	return f.description
 }
 
+// Default returns the default-Value of the referenced flag
 func (f Flag) Default() interface{} {
 	switch f.flagT.(type) {
 	case *stringFlag:
@@ -67,19 +71,20 @@ func (f Flag) Default() interface{} {
 	return nil
 }
 
-func (f Flag) Type() string {
+// Type returns the type of the referenced flag as a reflect.Kind
+func (f Flag) Type() reflect.Kind {
 	switch f.flagT.(type) {
 	case *stringFlag:
-		return "string"
+		return reflect.String
 
 	case *intFlag:
-		return "int"
+		return reflect.Int
 
 	case *boolFlag:
-		return "bool"
+		return reflect.Bool
 
 	default:
-		return ""
+		return reflect.Invalid
 	}
 }
 

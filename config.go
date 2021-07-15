@@ -59,7 +59,10 @@ func (c *Config) New(name string, defaultValue interface{}) *Flag {
 		panic(errors.Wrap(err, "error with field "+name))
 	}
 
-	var x interface{}
+	fl := Flag{
+		name:                 name,
+		pointerToStructField: &field,
+	}
 	switch defaultValue.(type) {
 
 	case string:
@@ -67,31 +70,26 @@ func (c *Config) New(name string, defaultValue interface{}) *Flag {
 			panic("cannot assign string-value of flag \"" + name + "\" to field of type " + fmt.Sprint(field.Type().Kind()))
 		}
 		field.SetString(defaultValue.(string))
-		x = stringFlag{defValue: defaultValue.(string)}
+		fl.flagT = &stringFlag{defValue: defaultValue.(string)}
 
 	case int:
 		if !(field.Type().Kind() == reflect.Int || field.Type().Kind() == reflect.Int64) {
 			panic("cannot assign int-value of flag \"" + name + "\" to field of type " + fmt.Sprint(field.Type().Kind()))
 		}
 		field.SetInt(defaultValue.(int64))
-		x = intFlag{defValue: defaultValue.(int)}
+		fl.flagT = &intFlag{defValue: defaultValue.(int)}
 
 	case bool:
 		if field.Type().Kind() != reflect.Bool {
 			panic("cannot assign bool-value of flag \"" + name + "\" to field of type " + fmt.Sprint(field.Type().Kind()))
 		}
 		field.SetBool(defaultValue.(bool))
-		x = boolFlag{defValue: defaultValue.(bool)}
+		fl.flagT = &boolFlag{defValue: defaultValue.(bool)}
 
 	default:
 		panic("type not yet implemented. visit https://github.com/ByteSizedMarius/go-config/")
 	}
 
-	fl := Flag{
-		flagT:                &x,
-		name:                 name,
-		pointerToStructField: &field,
-	}
 	c.flags = append(c.flags, &fl)
 	return &fl
 }

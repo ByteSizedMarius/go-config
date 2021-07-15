@@ -64,28 +64,6 @@ func (c *Config) parseCLI() (err error) {
 	return nil
 }
 
-func (c *Config) checkForDuplicates() error {
-	used := make(map[string]bool)
-
-	// Remove cli prefixes
-	args := append(os.Args[:0:0], os.Args...) // copy slice
-	for i := range args {
-		args[i] = s.Trim(args[i], "-")
-	}
-
-	for _, f := range c.flags {
-		for _, fn := range append(f.alias, f.name) {
-			if used[fn] {
-				return fmt.Errorf("There were two values provided for the commandline-parameter " + fn + " via its aliases. Every commandline-parameter should only be set once.")
-			}
-
-			used[fn] = true
-		}
-	}
-
-	return nil
-}
-
 func (c *Config) initializeCommandline() {
 	cli.CommandLine = cli.NewFlagSet(os.Args[0], cli.PanicOnError)
 
@@ -130,4 +108,26 @@ func (c *Config) initializeCommandline() {
 			}
 		}
 	}
+}
+
+func (c *Config) checkForDuplicates() error {
+	used := make(map[string]bool)
+
+	// Remove cli prefixes
+	args := append(os.Args[:0:0], os.Args...) // copy slice
+	for i := range args {
+		args[i] = s.Trim(args[i], "-")
+	}
+
+	for _, f := range c.flags {
+		for _, fn := range append(f.alias, f.name) {
+			if used[fn] {
+				return fmt.Errorf("There were two values provided for the commandline-parameter " + fn + " via its aliases. Every commandline-parameter should only be set once.")
+			}
+
+			used[fn] = true
+		}
+	}
+
+	return nil
 }
