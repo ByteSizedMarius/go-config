@@ -19,8 +19,9 @@ func (c *Config) parseCLI() (err error) {
 
 	// recover panic from flag-package
 	defer func() {
-		if errX := recover().(error); errX != nil {
-			if !errors.Is(cli.ErrHelp, errX) {
+		if errX := recover(); errX != nil {
+			errY := errX.(error)
+			if !errors.Is(cli.ErrHelp, errY) {
 				err = fmt.Errorf(fmt.Sprint(errX))
 			}
 		}
@@ -129,18 +130,4 @@ func (c *Config) initializeCommandline() {
 			}
 		}
 	}
-}
-
-// SetUseInCli sets whether the parameter will be available via commandline-parameters
-// Default: True
-func (f *Flag) SetUseInCli(use bool) *Flag {
-	f.doNotUseInCli = !use
-	return f
-}
-
-// SetUseAliasInCli allows setting whether the provided aliases will be useable via the cli.
-// Default: True
-func (f *Flag) SetUseAliasInCli(use bool) *Flag {
-	f.doNotUseAliasInCli = !use
-	return f
 }

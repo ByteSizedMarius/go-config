@@ -10,41 +10,10 @@ import (
 type Config struct {
 	structToFill interface{}
 	flags        []*Flag
-	Usage        func()
 	iniFile      string
 }
 
-type Flag struct {
-	flagT                interface{}
-	name                 string
-	alias                []string
-	description          string
-	doNotUseInCli        bool
-	doNotUseInIni        bool
-	doNotUseAliasInCli   bool
-	doNotUseAliasInIni   bool
-	pointerToStructField *reflect.Value // the pointer to the field in the struct
-}
-
-type stringFlag struct {
-	values   []*string // stores the flags values during parsing
-	defValue string    // the default-value
-}
-
-type intFlag struct {
-	values   []*int
-	defValue int
-}
-
-type boolFlag struct {
-	values   []*bool
-	defValue bool
-}
-
 /*
-todo: check if field is correct type for current flag
-todo: setuseinini setusealiasinini
-
 Tests:
 sicherstellen dass die ini-setter funktionieren
 */
@@ -61,7 +30,7 @@ func Initialize(stf interface{}) (Config, error) {
 		return Config{}, fmt.Errorf("structToFill must be a pointer to a struct")
 	}
 
-	return Config{structToFill: stf, Usage: cli.Usage}, nil
+	return Config{structToFill: stf}, nil
 }
 
 func (c *Config) Parse() error {
@@ -74,29 +43,72 @@ func (c *Config) Parse() error {
 	return errors.Wrap(err, "CLI")
 }
 
-// NewString adds a new string-parameter to the config-handler
-func (c *Config) NewString(name string, defaultValue string) *Flag {
+// New adds a new parameter to the config-handler based on the given type
+func (c *Config) New(name string, defaultValue interface{}) *Flag {
+	// Look for existing flags
 	if getFlagFromNameOrAlias(c.flags, name) != nil {
 		panic("duplicate flag: " + name)
 	}
 
-	// looks up the given string in the given struct
+	// get the corresponding field from the struct
 	f := getFieldFromName(*c, name)
 
 	// check if the field exists in the struct and whether it's valid
 	field, err := checkFieldValidity(f)
 	if err != nil {
-		panic(errors.Wrap(err, "error when setting string-parameter "+name))
+		panic(errors.Wrap(err, "error with field "+name))
 	}
-	field.SetString(defaultValue)
+
+	var x interface{}
+	switch defaultValue.(type) {
+
+	case string:
+		if field.Type().Kind() != reflect.String {
+			panic("cannot assign string-value of flag \"" + name + "\" to field of type " + fmt.Sprint(field.Type().Kind()))
+		}
+		field.SetString(defaultValue.(string))
+		x = stringFlag{defValue: defaultValue.(string)}
+
+	case int:
+		if !(field.Type().Kind() == reflect.Int || field.Type().Kind() == reflect.Int64) {
+			panic("cannot assign int-value of flag \"" + name + "\" to field of type " + fmt.Sprint(field.Type().Kind()))
+		}
+		field.SetInt(defaultValue.(int64))
+		x = intFlag{defValue: defaultValue.(int)}
+
+	case bool:
+		if field.Type().Kind() != reflect.Bool {
+			panic("cannot assign bool-value of flag \"" + name + "\" to field of type " + fmt.Sprint(field.Type().Kind()))
+		}
+		field.SetBool(defaultValue.(bool))
+		x = boolFlag{defValue: defaultValue.(bool)}
+
+	default:
+		panic("type not yet implemented. visit https://github.com/ByteSizedMarius/go-config/")
+	}
 
 	fl := Flag{
-		flagT:                &stringFlag{defValue: defaultValue},
+		flagT:                &x,
 		name:                 name,
 		pointerToStructField: &field,
 	}
 	c.flags = append(c.flags, &fl)
 	return &fl
+}
+
+// NewString adds a new string-parameter to the config-handler
+func (c *Config) NewString(name string, defaultValue string) *Flag {
+	return c.New(name, defaultValue)
+}
+
+// NewInt adds a new int-parameter to the config-handler
+func (c *Config) NewInt(name string, defaultValue int) *Flag {
+	return c.New(name, defaultValue)
+}
+
+// NewBool adds a new bool-parameter to the config-handler
+func (c *Config) NewBool(name string, defaultValue bool) *Flag {
+	return c.New(name, defaultValue)
 }
 
 // SetINI sets the ini-File to parse
@@ -105,56 +117,6 @@ func (c *Config) SetINI(iniFile string) *Config {
 	return c
 }
 
-// SetAlias sets the aliases for the string-parameter
-func (f *Flag) SetAlias(alias []string) *Flag {
-	f.alias = alias
-	return f
-}
-
-// SetDescription sets the description used by the flag-pkg for help
-func (f *Flag) SetDescription(desc string) *Flag {
-	f.description = desc
-	return f
-}
-
-func (f Flag) Name() string {
-	return f.name
-}
-
-func (f Flag) Alias() []string {
-	return f.alias
-}
-
-func (f Flag) Description() string {
-	return f.description
-}
-
-func (f Flag) Default() interface{} {
-	switch f.flagT.(type) {
-	case *stringFlag:
-		return f.flagT.(*stringFlag).defValue
-
-	case *intFlag:
-		return f.flagT.(*intFlag).defValue
-
-	case *boolFlag:
-		return f.flagT.(*boolFlag).defValue
-	}
-	return nil
-}
-
-func (f Flag) Type() string {
-	switch f.flagT.(type) {
-	case *stringFlag:
-		return "string"
-
-	case *intFlag:
-		return "int"
-
-	case *boolFlag:
-		return "bool"
-
-	default:
-		return ""
-	}
+func (c *Config) SetUsage(usage func()) {
+	cli.Usage = usage
 }
