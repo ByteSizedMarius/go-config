@@ -1,9 +1,16 @@
 package go_config
 
 import (
+	"io/ioutil"
 	"os"
 	"testing"
 )
+
+//
+//
+// Util
+//
+//
 
 func initConfig(t *testing.T, x interface{}) Config {
 	cs, err := Initialize(x)
@@ -20,6 +27,21 @@ func buildArgs(targs []string) []string {
 	}
 	return args
 }
+
+func createIni(val string) string {
+	file := "test_conf.ini"
+	err := ioutil.WriteFile(file, []byte(val), 0777)
+	if err != nil {
+		panic(err)
+	}
+	return file
+}
+
+//
+//
+// Tests
+//
+//
 
 type TestCaseSensitivityStruct struct {
 	Option1 string `name:"a"`
@@ -67,59 +89,4 @@ type TestUseStruct struct {
 	Option1 string `name:"test1"`
 	Option2 string `name:"test2"`
 	Option3 string `name:"test3"`
-}
-
-func TestUseInCli(t *testing.T) {
-	os.Args = buildArgs([]string{"-test1=x1"})
-	x := TestUseStruct{}
-
-	cs := initConfig(t, &x)
-	cs.NewString("test1", "null")
-
-	err := cs.Parse()
-	if err != nil {
-		t.Error(err)
-	}
-}
-
-func TestDoNotUseInCli(t *testing.T) {
-	os.Args = buildArgs([]string{"-test1=x1", "-test2=x2"})
-	x := TestUseStruct{}
-
-	cs := initConfig(t, &x)
-	cs.NewString("test1", "null").SetUseInCli(false)
-	cs.NewString("test2", "null")
-
-	err := cs.Parse()
-	if err == nil {
-		t.Error("no error thrown")
-	}
-}
-
-func TestUseAliasInCli(t *testing.T) {
-	os.Args = buildArgs([]string{"-testAlias1=x1", "-test2=x2"})
-	x := TestUseStruct{}
-
-	cs := initConfig(t, &x)
-	cs.NewString("test1", "null").SetAlias([]string{"testAlias1"})
-	cs.NewString("test2", "null")
-
-	err := cs.Parse()
-	if err != nil {
-		t.Error(err)
-	}
-}
-
-func TestDoNotUseAliasInCli(t *testing.T) {
-	os.Args = buildArgs([]string{"-testAlias1=x1", "-test2=x2"})
-	x := TestUseStruct{}
-
-	cs := initConfig(t, &x)
-	cs.NewString("test1", "null").SetUseAliasInCli(false).SetAlias([]string{"testAlias1"})
-	cs.NewString("test2", "null")
-
-	err := cs.Parse()
-	if err == nil {
-		t.Error("no error thrown")
-	}
 }

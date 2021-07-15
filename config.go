@@ -15,7 +15,9 @@ type Config struct {
 
 /*
 Tests:
-sicherstellen dass die ini-setter funktionieren
+int/bool/string jeweils einmal testen
+int/bool/string jeweils einmal mit falschem typ im struct testen
+
 */
 
 // Initialize checks parameters and creates a Config-struct
