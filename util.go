@@ -1,4 +1,4 @@
-package go_config
+package goconfig
 
 import (
 	s "strings"

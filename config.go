@@ -1,4 +1,4 @@
-package go_config
+package goconfig
 
 import (
 	cli "flag"
@@ -17,7 +17,6 @@ type Config struct {
 Tests:
 int/bool/string jeweils einmal testen
 int/bool/string jeweils einmal mit falschem typ im struct testen
-
 */
 
 // Initialize checks parameters and creates a Config-struct
@@ -47,6 +46,10 @@ func (c *Config) Parse() error {
 
 // New adds a new parameter to the config-handler based on the given type
 func (c *Config) New(name string, defaultValue interface{}) *Flag {
+	if c.structToFill == nil{
+		panic("Config was not initialized correctly. Use goconfig.Initialize().")
+	}
+
 	// Look for existing flags
 	if getFlagFromNameOrAlias(c.flags, name) != nil {
 		panic("duplicate flag: " + name)
@@ -78,7 +81,7 @@ func (c *Config) New(name string, defaultValue interface{}) *Flag {
 		if !(field.Type().Kind() == reflect.Int || field.Type().Kind() == reflect.Int64) {
 			panic("cannot assign int-value of flag \"" + name + "\" to field of type " + fmt.Sprint(field.Type().Kind()))
 		}
-		field.SetInt(defaultValue.(int64))
+		field.SetInt(int64(defaultValue.(int)))
 		fl.flagT = &intFlag{defValue: defaultValue.(int)}
 
 	case bool:

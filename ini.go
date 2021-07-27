@@ -1,7 +1,8 @@
-package go_config
+package goconfig
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/zieckey/goini"
 	"strconv"
 )
@@ -53,7 +54,7 @@ func (c *Config) parseINI() error {
 			case *intFlag:
 				val, err := strconv.Atoi(iniVal)
 				if err != nil {
-					return err
+					return errors.Wrap(err, "invalid value for int-flag")
 				}
 
 				f.pointerToStructField.SetInt(int64(val))
@@ -61,7 +62,7 @@ func (c *Config) parseINI() error {
 			case *boolFlag:
 				val, err := strconv.ParseBool(iniVal)
 				if err != nil {
-					return err
+					return errors.Wrap(err, "invalid value for boolean-flag")
 				}
 				f.pointerToStructField.SetBool(val)
 			}
@@ -70,4 +71,3 @@ func (c *Config) parseINI() error {
 
 	return err
 }
-

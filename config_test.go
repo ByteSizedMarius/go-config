@@ -1,4 +1,4 @@
-package go_config
+package goconfig
 
 import (
 	"io/ioutil"
@@ -83,10 +83,4 @@ func TestDuplicateStringFlags(t *testing.T) {
 	cs.NewString("myTest", "null")
 	cs.NewString("A", "null")
 	cs.NewString("myTest", "null")
-}
-
-type TestUseStruct struct {
-	Option1 string `name:"test1"`
-	Option2 string `name:"test2"`
-	Option3 string `name:"test3"`
 }
